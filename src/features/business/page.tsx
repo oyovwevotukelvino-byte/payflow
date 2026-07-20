@@ -16,16 +16,13 @@ export default async function BusinessOnboardingPage() {
     redirect("/dashboard");
   }
 
-  return <BusinessForm />;
+  return (
+    <div className="mx-auto max-w-lg py-12">
+      <h1 className="mb-2 text-2xl font-semibold">Set up your business</h1>
+      <p className="mb-8 text-muted-foreground">
+        This takes about a minute. You can update these details later.
+      </p>
+      <BusinessForm />
+    </div>
+  );
 }
-// import { auth } from "@/auth";
-
-// export default async function BusinessOnboardingPage() {
-//   const session = await auth();
-
-//   return (
-//     <pre>
-//       {JSON.stringify(session, null, 2)}
-//     </pre>
-//   );
-// }

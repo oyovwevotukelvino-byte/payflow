@@ -10,7 +10,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
   adapter: PrismaAdapter(prisma),
   session: {
-    strategy: "database",
+    strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60,
   },
   providers: [
@@ -23,15 +23,25 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
-    ...authConfig.callbacks,
-    async session({ session, user }) {
-      if (session.user) {
-        session.user.id = user.id;
-        if (user.phoneNumber) {
-        session.user.phoneNumber = user.phoneNumber;
-        }
+  ...authConfig.callbacks,
+  async session({ session, token }) {
+    if (session.user) {
+      session.user.id = token.sub!;
+
+      if (token.phoneNumber) {
+        session.user.phoneNumber = token.phoneNumber as string;
       }
-      return session;
-    },
+    }
+
+    return session;
   },
+
+  async jwt({ token, user }) {
+    if (user) {
+      token.phoneNumber = (user as any).phoneNumber;
+    }
+
+    return token;
+  },
+},
 });

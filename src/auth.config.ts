@@ -1,6 +1,8 @@
 import type { NextAuthConfig } from "next-auth";
 
- export const authConfig: NextAuthConfig = {
+export const authConfig: NextAuthConfig = {
+  secret: process.env.AUTH_SECRET,
+
   pages: {
     signIn: "/sign-in",
   },
@@ -8,7 +10,8 @@ import type { NextAuthConfig } from "next-auth";
   callbacks: {
     authorized({ auth, request }) {
       const isLoggedIn = !!auth?.user;
-      const isOnDashboard = request.nextUrl.pathname.startsWith("/dashboard");
+      const isOnDashboard =
+        request.nextUrl.pathname.startsWith("/dashboard");
 
       if (isOnDashboard) {
         return isLoggedIn;
