@@ -10,17 +10,16 @@ import { FormError } from "@/components/shared/forms/form-error";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+const inputClass =
+  "h-11 rounded-lg border-[var(--pf-border)] px-3.5 text-[15px] focus-visible:ring-2 focus-visible:ring-[var(--pf-brand)]/40 focus-visible:ring-offset-0 focus-visible:border-[var(--pf-brand)]";
+const labelClass = "text-sm font-medium text-[var(--pf-ink)]";
+
 export function RegisterForm() {
   const router = useRouter();
   const [state, formAction, isPending] = useActionState(registerAction, null);
 
-  // Navigation is a client concern per the Step 8 reasoning above — the
-  // action returns a typed result rather than redirecting itself, so the
-  // component decides what "success" means for navigation.
   useEffect(() => {
-    if (state?.success) {
-      router.replace("/onboarding/business");
-    }
+    if (state?.success) router.push("/onboarding/business");
   }, [state, router]);
 
   const fieldErrors = state && !state.success ? state.fieldErrors : undefined;
@@ -28,21 +27,21 @@ export function RegisterForm() {
     state && !state.success && !fieldErrors ? state.error : undefined;
 
   return (
-    <form action={formAction} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="name">Full name</Label>
-        <Input id="name" name="name" autoComplete="name" required />
+    <form action={formAction} className="space-y-5">
+      <div className="space-y-1.5">
+        <Label htmlFor="name" className={labelClass}>Full name</Label>
+        <Input id="name" name="name" autoComplete="name" required className={inputClass} />
         <FormError message={fieldErrors?.name?.[0]} />
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
-        <Input id="email" name="email" type="email" autoComplete="email" required />
+      <div className="space-y-1.5">
+        <Label htmlFor="email" className={labelClass}>Email</Label>
+        <Input id="email" name="email" type="email" autoComplete="email" required className={inputClass} />
         <FormError message={fieldErrors?.email?.[0]} />
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="phoneNumber">Phone number</Label>
+      <div className="space-y-1.5">
+        <Label htmlFor="phoneNumber" className={labelClass}>Phone number</Label>
         <Input
           id="phoneNumber"
           name="phoneNumber"
@@ -50,34 +49,29 @@ export function RegisterForm() {
           autoComplete="tel"
           placeholder="08012345678"
           required
+          className={inputClass}
         />
         <FormError message={fieldErrors?.phoneNumber?.[0]} />
       </div>
 
-      <PasswordField
-        id="password"
-        name="password"
-        label="Password"
-        autoComplete="new-password"
-      />
-      <FormError message={fieldErrors?.password?.[0]} />
+      <div className="space-y-1.5">
+        <PasswordField id="password" name="password" label="Password" autoComplete="new-password" />
+        <FormError message={fieldErrors?.password?.[0]} />
+      </div>
 
-      <PasswordField
-        id="confirmPassword"
-        name="confirmPassword"
-        label="Confirm password"
-        autoComplete="new-password"
-      />
-      <FormError message={fieldErrors?.confirmPassword?.[0]} />
+      <div className="space-y-1.5">
+        <PasswordField
+          id="confirmPassword"
+          name="confirmPassword"
+          label="Confirm password"
+          autoComplete="new-password"
+        />
+        <FormError message={fieldErrors?.confirmPassword?.[0]} />
+      </div>
 
       <FormError message={formLevelError} />
 
-      <LoadingButton
-        type="submit"
-        className="w-full"
-        isPending={isPending}
-        pendingText="Creating account…"
-      >
+      <LoadingButton isPending={isPending} pendingText="Creating account…">
         Create account
       </LoadingButton>
     </form>

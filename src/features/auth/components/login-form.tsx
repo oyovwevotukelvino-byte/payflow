@@ -10,57 +10,50 @@ import { FormError } from "@/components/shared/forms/form-error";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+const inputClass =
+  "h-11 rounded-lg border-[var(--pf-border)] px-3.5 text-[15px] focus-visible:ring-2 focus-visible:ring-[var(--pf-brand)]/40 focus-visible:ring-offset-0 focus-visible:border-[var(--pf-brand)]";
+const labelClass = "text-sm font-medium text-[var(--pf-ink)]";
+
 export function LoginForm() {
   const router = useRouter();
   const [state, formAction, isPending] = useActionState(loginAction, null);
 
   useEffect(() => {
-    if (state?.success) {
-      router.replace("/dashboard");
-    }
+    if (state?.success) router.push("/dashboard");
   }, [state, router]);
 
-    const fieldErrors =
-  state && !state.success
-    ? state.fieldErrors
-    : undefined;
-
-  const hasFieldErrors =
-  !!fieldErrors &&
-  Object.keys(fieldErrors).length > 0;
-
+  const fieldErrors = state && !state.success ? state.fieldErrors : undefined;
   const formLevelError =
-  state &&
-  !state.success &&
-  !hasFieldErrors
-    ? state.error
-    : undefined;
+    state && !state.success && !fieldErrors ? state.error : undefined;
 
- 
   return (
-    <form action={formAction} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
-        <Input id="email" name="email" type="email" autoComplete="email" required />
+    <form action={formAction} className="space-y-5">
+      <div className="space-y-1.5">
+        <Label htmlFor="email" className={labelClass}>Email</Label>
+        <Input
+          id="email"
+          name="email"
+          type="email"
+          autoComplete="email"
+          required
+          className={inputClass}
+        />
         <FormError message={fieldErrors?.email?.[0]} />
       </div>
 
-      <PasswordField
-        id="password"
-        name="password"
-        label="Password"
-        autoComplete="current-password"
-      />
-      <FormError message={fieldErrors?.password?.[0]} />
+      <div className="space-y-1.5">
+        <PasswordField
+          id="password"
+          name="password"
+          label="Password"
+          autoComplete="current-password"
+        />
+        <FormError message={fieldErrors?.password?.[0]} />
+      </div>
 
       <FormError message={formLevelError} />
 
-      <LoadingButton
-        type="submit"
-        className="w-full"
-        isPending={isPending}
-        pendingText="Signing in…"
-      >
+      <LoadingButton isPending={isPending} pendingText="Signing in…">
         Sign in
       </LoadingButton>
     </form>

@@ -7,7 +7,7 @@ export function FormError({ message }: FormErrorProps) {
   if (!message) return null;
 
   return (
-    <p role="alert" className="text-sm font-medium text-destructive">
+    <p role="alert" className="mt-1.5 text-sm text-red-600">
       {message}
     </p>
   );
