@@ -1,10 +1,13 @@
-// features/customers/services/customer.service.ts
 import { prisma } from "@/lib/db";
 import type { CustomerInput } from "../schemas/customer-schema";
 
 export class CustomerServiceError extends Error {}
 
-export interface Customer {
+/**
+ * Public-facing customer projection.
+ * Deliberately omits businessId, updatedAt and relations.
+ */
+export interface CustomerSummary {
   id: string;
   name: string;
   email: string | null;
@@ -13,7 +16,7 @@ export interface Customer {
   createdAt: Date;
 }
 
-const customerSelect = {
+export const customerSelect = {
   id: true,
   name: true,
   email: true,
@@ -23,13 +26,10 @@ const customerSelect = {
 } as const;
 
 export const customerService = {
-  /**
-   * Creates a customer under the given business. businessId must already
-   * be resolved from the authenticated session by the caller (a Server
-   * Action) — this method trusts it as given, and never derives it from
-   * client input itself.
-   */
-  async createCustomer(businessId: string, input: CustomerInput): Promise<Customer> {
+  async createCustomer(
+    businessId: string,
+    input: CustomerInput
+  ): Promise<CustomerSummary> {
     return prisma.customer.create({
       data: {
         businessId,
@@ -42,18 +42,16 @@ export const customerService = {
     });
   },
 
-  /**
-   * Updates a customer, scoped to businessId — the compound where clause
-   * ensures a customerId belonging to a different business simply won't
-   * match, rather than silently updating the wrong tenant's data.
-   */
   async updateCustomer(
     businessId: string,
     customerId: string,
     input: CustomerInput
-  ): Promise<Customer> {
+  ): Promise<CustomerSummary> {
     const result = await prisma.customer.updateMany({
-      where: { id: customerId, businessId },
+      where: {
+        id: customerId,
+        businessId,
+      },
       data: {
         name: input.name,
         email: input.email || null,
@@ -66,8 +64,11 @@ export const customerService = {
       throw new CustomerServiceError("Customer not found.");
     }
 
-    const updated = await prisma.customer.findUnique({
-      where: { id: customerId },
+    const updated = await prisma.customer.findFirst({
+      where: {
+        id: customerId,
+        businessId,
+      },
       select: customerSelect,
     });
 
@@ -78,12 +79,15 @@ export const customerService = {
     return updated;
   },
 
-  /**
-   * Deletes a customer, same businessId-scoped safety as update.
-   */
-  async deleteCustomer(businessId: string, customerId: string): Promise<void> {
+  async deleteCustomer(
+    businessId: string,
+    customerId: string
+  ): Promise<void> {
     const result = await prisma.customer.deleteMany({
-      where: { id: customerId, businessId },
+      where: {
+        id: customerId,
+        businessId,
+      },
     });
 
     if (result.count === 0) {
@@ -91,37 +95,37 @@ export const customerService = {
     }
   },
 
-  /**
-   * Fetches a single customer, scoped to businessId. Returns null rather
-   * than throwing on "not found" — callers (Server Actions, detail pages)
-   * decide how to handle absence, since "not found" isn't always an error
-   * condition (e.g. a page might want to show a 404 UI, not a thrown error).
-   */
-  async getCustomer(businessId: string, customerId: string): Promise<Customer | null> {
+  async getCustomer(
+    businessId: string,
+    customerId: string
+  ): Promise<CustomerSummary | null> {
     return prisma.customer.findFirst({
-      where: { id: customerId, businessId },
+      where: {
+        id: customerId,
+        businessId,
+      },
       select: customerSelect,
     });
   },
 
-  /**
-   * Lists all customers for a business, most recently created first.
-   * No pagination in this phase — see Phase 1 notes above.
-   */
-  async getCustomers(businessId: string): Promise<Customer[]> {
+  async getCustomers(
+    businessId: string
+  ): Promise<CustomerSummary[]> {
     return prisma.customer.findMany({
-      where: { businessId },
+      where: {
+        businessId,
+      },
       select: customerSelect,
-      orderBy: { createdAt: "desc" },
+      orderBy: {
+        createdAt: "desc",
+      },
     });
   },
 
-  /**
-   * Server-side search across name, phone, and email. Empty/whitespace
-   * queries fall back to the same behavior as getCustomers, so callers
-   * don't need to branch on "is there a query" themselves.
-   */
-  async searchCustomers(businessId: string, query: string): Promise<Customer[]> {
+  async searchCustomers(
+    businessId: string,
+    query: string
+  ): Promise<CustomerSummary[]> {
     const trimmed = query.trim();
 
     if (!trimmed) {
@@ -132,13 +136,30 @@ export const customerService = {
       where: {
         businessId,
         OR: [
-          { name: { contains: trimmed, mode: "insensitive" } },
-          { phone: { contains: trimmed, mode: "insensitive" } },
-          { email: { contains: trimmed, mode: "insensitive" } },
+          {
+            name: {
+              contains: trimmed,
+              mode: "insensitive",
+            },
+          },
+          {
+            email: {
+              contains: trimmed,
+              mode: "insensitive",
+            },
+          },
+          {
+            phone: {
+              contains: trimmed,
+              mode: "insensitive",
+            },
+          },
         ],
       },
       select: customerSelect,
-      orderBy: { createdAt: "desc" },
+      orderBy: {
+        createdAt: "desc",
+      },
     });
   },
 };

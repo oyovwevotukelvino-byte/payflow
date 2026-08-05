@@ -1,4 +1,3 @@
-// features/customers/schemas/customer-schema.ts
 import { z } from "zod";
 import { phoneSchema } from "@/lib/validations/phone-schema";
 
@@ -6,20 +5,23 @@ export const customerSchema = z.object({
   name: z
     .string()
     .trim()
-    .min(2, "Customer name must be at least 2 characters")
-    .max(150, "Customer name is too long"),
+    .min(2)
+    .max(150),
+
   email: z
     .string()
     .trim()
     .toLowerCase()
-    .email("Enter a valid email address")
+    .email()
     .optional()
     .or(z.literal("")),
+
   phone: phoneSchema.optional().or(z.literal("")),
+
   address: z
     .string()
     .trim()
-    .max(255, "Address is too long")
+    .max(255)
     .optional()
     .or(z.literal("")),
 });
