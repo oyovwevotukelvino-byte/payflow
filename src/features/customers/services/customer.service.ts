@@ -11,7 +11,7 @@ export interface CustomerSummary {
   id: string;
   name: string;
   email: string | null;
-  phone: string | null;
+  phone: string ;
   address: string | null;
   createdAt: Date;
 }
@@ -35,7 +35,7 @@ export const customerService = {
         businessId,
         name: input.name,
         email: input.email || null,
-        phone: input.phone || null,
+        phone: input.phone ,
         address: input.address || null,
       },
       select: customerSelect,
@@ -55,7 +55,7 @@ export const customerService = {
       data: {
         name: input.name,
         email: input.email || null,
-        phone: input.phone || null,
+        phone: input.phone,
         address: input.address || null,
       },
     });
