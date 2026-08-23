@@ -58,60 +58,61 @@ model VerificationToken {
 }
 
 model Business {
-  id        String     @id @default(cuid())
-  name      String
-  slug      String     @unique
-  phone     String?
-  email     String?
-  address   String?
-  logo      String?
-  currency  String     @default("NGN")
-  ownerId   String     @unique
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  owner     User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  customers Customer[]
-  invoices  Invoice[]
-  payments  Payment[]
+  id                String     @id @default(cuid())
+  name              String
+  slug              String     @unique
+  phone             String?
+  email             String?
+  address           String?
+  logo              String?
+  currency          String     @default("NGN")
+  ownerId           String     @unique
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  nextInvoiceNumber Int        @default(1)
+  owner             User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  customers         Customer[]
+  invoices          Invoice[]
+  payments          Payment[]
 }
 
-
 model Customer {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   businessId String
-
-  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-
-  name    String
-  email   String?
-  phone   String
-  address String?
-
-  invoices Invoice[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  name       String
+  email      String?
+  phone      String
+  address    String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  business   Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  invoices   Invoice[]
 
   @@index([businessId])
 }
 
 model Invoice {
-  id            String        @id @default(cuid())
-  invoiceNumber String
-  businessId    String
-  customerId    String
-  status        InvoiceStatus @default(DRAFT)
-  subtotal      Decimal       @db.Decimal(12, 2)
-  tax           Decimal       @default(0) @db.Decimal(12, 2)
-  total         Decimal       @db.Decimal(12, 2)
-  notes         String?
-  dueDate       DateTime
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  business      Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  customer      Customer      @relation(fields: [customerId], references: [id])
-  items         InvoiceItem[]
-  payment       Payment?
+  id              String        @id @default(cuid())
+  invoiceNumber   String
+  businessId      String
+  customerId      String
+  status          InvoiceStatus @default(DRAFT)
+  subtotal        Decimal       @db.Decimal(12, 2)
+  tax             Decimal       @default(0) @db.Decimal(12, 2)
+  total           Decimal       @db.Decimal(12, 2)
+  notes           String?
+  dueDate         DateTime
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  customerAddress String?
+  customerEmail   String?
+  customerName    String
+  customerPhone   String
+  vatEnabled      Boolean       @default(false)
+  business        Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  customer        Customer      @relation(fields: [customerId], references: [id])
+  items           InvoiceItem[]
+  payments        Payment[]
 
   @@unique([businessId, invoiceNumber])
   @@index([businessId])
@@ -132,7 +133,7 @@ model InvoiceItem {
 model Payment {
   id         String        @id @default(cuid())
   businessId String
-  invoiceId  String        @unique
+  invoiceId  String
   reference  String        @unique
   amount     Decimal       @db.Decimal(12, 2)
   status     PaymentStatus @default(PENDING)
@@ -142,6 +143,7 @@ model Payment {
   invoice    Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
   @@index([businessId])
+  @@index([invoiceId])
 }
 
 enum UserRole {
