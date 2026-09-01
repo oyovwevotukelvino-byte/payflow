@@ -60,11 +60,11 @@ const RECENT_INVOICES = [
  */
 export function PaymentTracking() {
   return (
-    <section id="payment-tracking" className="bg-[var(--pf-navy)] py-20 sm:py-28">
+    <section id="payment-tracking" className="bg-(--pf-navy) py-20 sm:py-28">
       <SectionContainer>
         <div className="mx-auto max-w-xl text-center">
           <h2 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-            Know who's paid, at a glance
+            Know who&apos;s paid, at a glance
           </h2>
           <p className="mt-4 text-white/70">
             No more scrolling through bank alerts trying to match a transfer to an invoice.
@@ -128,7 +128,7 @@ export function PaymentTracking() {
                         <span
                           className={
                             invoice.status === "Paid"
-                              ? "rounded-full bg-[var(--success)]/10 px-2 py-0.5 text-[10px] font-medium text-[var(--success)]"
+                              ? "rounded-full bg-(--success)/10 px-2 py-0.5 text-[10px] font-medium text-(--success)"
                               : "rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
                           }
                         >
@@ -148,21 +148,21 @@ export function PaymentTracking() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-60px" }}
             transition={{ duration: 0.5, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
-            className="rounded-2xl border border-white/10 bg-white/[0.04] p-6"
+            className="rounded-2xl border border-white/10 bg-white/4 p-6"
           >
-            <p className="text-sm font-medium text-white/50">Amara's Boutique &middot; WhatsApp</p>
+            <p className="text-sm font-medium text-white/50">Amara&apos;s Boutique &middot; WhatsApp</p>
             <div className="mt-4 space-y-2">
               <div className="ml-auto w-fit max-w-[85%] rounded-2xl rounded-br-sm bg-primary px-4 py-2.5 text-sm text-white">
-                 Good afternoon! Your invoice is ready \u2014 \u20a645,000. Pay securely here: payflow.app/i/23k91
+                 Good afternoon! Your invoice is ready — ₦45,000. Pay securely here: payflow.app/i/23k91
               </div>
               <div className="w-fit max-w-[85%] rounded-2xl rounded-bl-sm bg-white/10 px-4 py-2.5 text-sm text-white">
-                Payment sent \u2705
+                Payment sent ✅
               </div>
             </div>
-            <div className="mt-4 flex items-center gap-2 rounded-lg bg-[var(--success)]/10 px-3 py-2">
-              <CheckCircle2 className="h-4 w-4 text-[var(--success)]" aria-hidden="true" />
-              <span className="text-xs font-medium text-[var(--success)]">
-                Payment received \u2014 \u20a645,000. Invoice marked as Paid.
+            <div className="mt-4 flex items-center gap-2 rounded-lg bg-(--success)/10 px-3 py-2">
+              <CheckCircle2 className="h-4 w-4 text-(--success)" aria-hidden="true" />
+              <span className="text-xs font-medium text-(--success)">
+                Payment received — ₦45,000. Invoice marked as Paid.
               </span>
             </div>
           </motion.div>

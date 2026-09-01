@@ -1,5 +1,5 @@
 // features/invoices/services/invoice.service.ts
-
+import { randomBytes } from "crypto";
 import { prisma } from "@/lib/db";
 import {
   calculateInvoiceTotals,
@@ -9,7 +9,12 @@ import { formatInvoiceNumber } from "../constants/invoice.constants";
 import { resolveTax } from "../utils/invoice-tax";
 import type { CreateInvoiceInput } from "../schemas/invoice-schema";
 
+
 export class InvoiceServiceError extends Error {}
+
+function generatePublicToken(): string {
+  return randomBytes(32).toString("hex");
+}
 
 export interface InvoiceItemSummary {
   id: string;
@@ -194,6 +199,7 @@ export const invoiceService = {
         data: {
           businessId,
           customerId: customer.id,
+          publicToken: generatePublicToken(),
           invoiceNumber,
           status: "DRAFT",
 
@@ -255,5 +261,17 @@ export const invoiceService = {
     });
 
     return invoices.map(mapInvoiceToSummary);
+  },
+  async getInvoiceByPublicToken(
+    publicToken: string
+  ): Promise<InvoiceSummary | null> {
+    const invoice = await prisma.invoice.findUnique({
+      where: {
+        publicToken,
+      },
+      select: invoiceSelect,
+    });
+
+    return invoice ? mapInvoiceToSummary(invoice) : null;
   },
 };

@@ -96,7 +96,7 @@ export function StageComplete() {
         className="mt-auto pt-8 text-center"
       >
         <p className="text-base font-semibold">
-          That's it.
+          That&apos;s it.
         </p>
 
         <p className="mt-2 text-sm text-muted-foreground">

@@ -38,7 +38,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
   async jwt({ token, user }) {
     if (user) {
-      token.phoneNumber = (user as any).phoneNumber;
+      token.phoneNumber = user.phoneNumber;
     }
 
     return token;

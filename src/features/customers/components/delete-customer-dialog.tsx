@@ -1,7 +1,7 @@
 // features/customers/components/delete-customer-dialog.tsx
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   AlertDialog,
@@ -13,6 +13,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { FormError } from "@/components/shared/forms/form-error";
 import { deleteCustomer } from "../actions/delete-customer";
 
 interface DeleteCustomerDialogProps {
@@ -30,21 +31,29 @@ export function DeleteCustomerDialog({
 }: DeleteCustomerDialogProps) {
   const router = useRouter();
   const [isDeleting, startTransition] = useTransition();
+  const [error, setError] = useState<string | undefined>();
 
   const handleDelete = () => {
+    setError(undefined);
     startTransition(async () => {
       const result = await deleteCustomer(customerId);
       if (result.success) {
         onOpenChange(false);
         router.refresh();
+      } else {
+        setError(result.error);
       }
-      // On failure, dialog stays open — result.error isn't surfaced yet
-      // (see trade-off note below).
     });
   };
 
+  // Clear any stale error if the dialog is reopened for a different customer
+  const handleOpenChange = (next: boolean) => {
+    if (next) setError(undefined);
+    onOpenChange(next);
+  };
+
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
+    <AlertDialog open={open} onOpenChange={handleOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Delete {customerName}?</AlertDialogTitle>
@@ -52,6 +61,9 @@ export function DeleteCustomerDialog({
             This can&apos;t be undone. Any invoices linked to this customer will keep their record, but you won&apos;t be able to create new ones for them unless you re-add them.
           </AlertDialogDescription>
         </AlertDialogHeader>
+
+        <FormError message={error} />
+
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
           <AlertDialogAction

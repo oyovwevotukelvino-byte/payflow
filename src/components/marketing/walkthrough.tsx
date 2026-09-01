@@ -87,7 +87,7 @@ export function Walkthrough() {
                     className={cn(
                       "relative z-10 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 bg-background text-sm font-semibold",
                       isFinal
-                        ? "border-[var(--success)] text-[var(--success)]"
+                        ? "border-(--success) text-(--success)"
                         : "border-border text-foreground"
                     )}
                   >
@@ -98,7 +98,7 @@ export function Walkthrough() {
                     <p className="text-sm font-medium text-foreground">
                       {String(index + 1).padStart(2, "0")}. {step.label}
                     </p>
-                    <p className="mt-1 text-sm text-muted-foreground lg:max-w-[140px]">
+                    <p className="mt-1 text-sm text-muted-foreground lg:max-w-35">
                       {step.description}
                     </p>
                   </div>

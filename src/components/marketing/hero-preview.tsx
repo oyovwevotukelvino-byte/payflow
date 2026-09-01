@@ -98,7 +98,7 @@ export function HeroPreview() {
           >
             <MessageCircle className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
             <span className="text-xs font-medium text-foreground">
-              Sent via WhatsApp \u2014 \u20a645,000
+              Sent via WhatsApp — ₦45,000
             </span>
           </motion.div>
         )}
@@ -116,7 +116,7 @@ export function HeroPreview() {
           >
             <Wallet className="h-4 w-4 shrink-0 text-[var(--success)]" aria-hidden="true" />
             <span className="text-xs font-medium text-foreground">
-             Payment received \u2014 \u20a645,000
+             Payment received — ₦45,000
             </span>
           </motion.div>
         )}

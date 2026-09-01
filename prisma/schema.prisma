@@ -102,6 +102,9 @@ model Invoice {
   total           Decimal       @db.Decimal(12, 2)
   notes           String?
   dueDate         DateTime
+
+  publicToken     String        @unique
+
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   customerAddress String?
@@ -109,6 +112,7 @@ model Invoice {
   customerName    String
   customerPhone   String
   vatEnabled      Boolean       @default(false)
+
   business        Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
   customer        Customer      @relation(fields: [customerId], references: [id])
   items           InvoiceItem[]
