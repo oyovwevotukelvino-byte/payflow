@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -37,8 +38,14 @@ export function Navbar() {
       )}
     >
       <SectionContainer className="flex h-16 items-center justify-between">
-        <Link href="/" className="text-lg font-semibold tracking-tight text-white">
-          PayFlow
+        <Link href="/" className="flex items-center" aria-label="PayFlow home">
+          <Image
+            src="/payflow-logo.svg"
+            alt="PayFlow"
+            width={120}
+            height={34}
+            priority
+          />
         </Link>
 
         <nav aria-label="Main" className="hidden items-center gap-8 md:flex">
@@ -54,10 +61,18 @@ export function Navbar() {
         </nav>
 
         <div className="hidden items-center gap-3 md:flex">
-          <Button asChild variant="ghost" className="text-white hover:bg-white/10 hover:text-white">
+          <Button
+            asChild
+            variant="ghost"
+            className="text-white hover:bg-white/10 hover:text-white"
+          >
             <Link href="/sign-in">Sign in</Link>
           </Button>
-          <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90">
+
+          <Button
+            asChild
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
+          >
             <Link href="/sign-up">Create free account</Link>
           </Button>
         </div>
@@ -69,7 +84,11 @@ export function Navbar() {
           aria-label={mobileOpen ? "Close menu" : "Open menu"}
           aria-expanded={mobileOpen}
         >
-          {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          {mobileOpen ? (
+            <X className="h-6 w-6" />
+          ) : (
+            <Menu className="h-6 w-6" />
+          )}
         </button>
       </SectionContainer>
 
@@ -93,11 +112,20 @@ export function Navbar() {
                   {link.label}
                 </Link>
               ))}
+
               <div className="mt-2 flex flex-col gap-3">
-                <Button asChild variant="ghost" className="w-full text-white hover:bg-white/10 hover:text-white">
+                <Button
+                  asChild
+                  variant="ghost"
+                  className="w-full text-white hover:bg-white/10 hover:text-white"
+                >
                   <Link href="/sign-in">Sign in</Link>
                 </Button>
-                <Button asChild className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
+
+                <Button
+                  asChild
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 w-full"
+                >
                   <Link href="/sign-up">Create free account</Link>
                 </Button>
               </div>
@@ -108,4 +136,3 @@ export function Navbar() {
     </header>
   );
 }
-

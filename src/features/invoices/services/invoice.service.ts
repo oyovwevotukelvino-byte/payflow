@@ -1,14 +1,18 @@
-// features/invoices/services/invoice.service.ts
+// src/features/invoices/services/invoice.service.ts
+
 import { randomBytes } from "crypto";
+import { Prisma } from "@prisma/client";
+
 import { prisma } from "@/lib/db";
+
 import {
   calculateInvoiceTotals,
   InvoiceCalculationError,
 } from "../utils/invoice-calculations";
+
 import { formatInvoiceNumber } from "../constants/invoice.constants";
 import { resolveTax } from "../utils/invoice-tax";
 import type { CreateInvoiceInput } from "../schemas/invoice-schema";
-
 
 export class InvoiceServiceError extends Error {}
 
@@ -27,6 +31,7 @@ export interface InvoiceItemSummary {
 export interface InvoiceSummary {
   id: string;
   invoiceNumber: string;
+  publicToken: string;
   status: string;
   subtotal: string;
   vatEnabled: boolean;
@@ -53,6 +58,7 @@ const invoiceItemSelect = {
 const invoiceSelect = {
   id: true,
   invoiceNumber: true,
+  publicToken: true,
   status: true,
   subtotal: true,
   vatEnabled: true,
@@ -65,14 +71,15 @@ const invoiceSelect = {
   customerEmail: true,
   customerAddress: true,
   createdAt: true,
-  items: { select: invoiceItemSelect },
+  items: {
+    select: invoiceItemSelect,
+  },
 } as const;
-
-
 
 function mapInvoiceToSummary(invoice: {
   id: string;
   invoiceNumber: string;
+  publicToken: string;
   status: string;
   subtotal: { toString(): string };
   vatEnabled: boolean;
@@ -96,6 +103,7 @@ function mapInvoiceToSummary(invoice: {
   return {
     id: invoice.id,
     invoiceNumber: invoice.invoiceNumber,
+    publicToken: invoice.publicToken,
     status: invoice.status,
     subtotal: invoice.subtotal.toString(),
     vatEnabled: invoice.vatEnabled,
@@ -127,7 +135,7 @@ export const invoiceService = {
       throw new InvoiceServiceError("An invoice needs at least one item.");
     }
 
-    return prisma.$transaction(async (tx) => {
+    return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const customer = await tx.customer.findFirst({
         where: {
           id: input.customerId,
@@ -158,15 +166,9 @@ export const invoiceService = {
 
         const preTax = calculateInvoiceTotals(lineItems, 0);
 
-        const taxAmount = resolveTax(
-          preTax.subtotal,
-          input.vatEnabled
-        );
+        const taxAmount = resolveTax(preTax.subtotal, input.vatEnabled);
 
-        totals = calculateInvoiceTotals(
-          lineItems,
-          taxAmount
-        );
+        totals = calculateInvoiceTotals(lineItems, taxAmount);
       } catch (err) {
         if (err instanceof InvoiceCalculationError) {
           throw new InvoiceServiceError(err.message);
@@ -191,9 +193,7 @@ export const invoiceService = {
 
       const reservedNumber = business.nextInvoiceNumber - 1;
 
-      const invoiceNumber = formatInvoiceNumber(
-        reservedNumber
-      );
+      const invoiceNumber = formatInvoiceNumber(reservedNumber);
 
       const invoice = await tx.invoice.create({
         data: {
@@ -247,9 +247,7 @@ export const invoiceService = {
     return invoice ? mapInvoiceToSummary(invoice) : null;
   },
 
-  async getInvoices(
-    businessId: string
-  ): Promise<InvoiceSummary[]> {
+  async getInvoices(businessId: string): Promise<InvoiceSummary[]> {
     const invoices = await prisma.invoice.findMany({
       where: {
         businessId,
@@ -262,6 +260,7 @@ export const invoiceService = {
 
     return invoices.map(mapInvoiceToSummary);
   },
+
   async getInvoiceByPublicToken(
     publicToken: string
   ): Promise<InvoiceSummary | null> {
@@ -273,5 +272,92 @@ export const invoiceService = {
     });
 
     return invoice ? mapInvoiceToSummary(invoice) : null;
+  },
+
+  async markInvoiceAsSent(
+    businessId: string,
+    invoiceId: string
+  ): Promise<InvoiceSummary> {
+    const invoice = await prisma.invoice.findFirst({
+      where: {
+        id: invoiceId,
+        businessId,
+      },
+      select: {
+        id: true,
+        status: true,
+      },
+    });
+
+    if (!invoice) {
+      throw new InvoiceServiceError("Invoice not found.");
+    }
+
+    if (invoice.status !== "DRAFT") {
+      throw new InvoiceServiceError(
+        "Only draft invoices can be marked as sent."
+      );
+    }
+
+    const updatedInvoice = await prisma.invoice.update({
+      where: {
+        id: invoiceId,
+      },
+      data: {
+        status: "SENT",
+      },
+      select: invoiceSelect,
+    });
+
+    return mapInvoiceToSummary(updatedInvoice);
+  },
+
+  async markInvoiceAsViewed(publicToken: string): Promise<InvoiceSummary> {
+    const invoice = await prisma.invoice.findUnique({
+      where: {
+        publicToken,
+      },
+      select: {
+        id: true,
+        status: true,
+      },
+    });
+
+    if (!invoice) {
+      throw new InvoiceServiceError("Invoice not found.");
+    }
+
+    if (invoice.status === "VIEWED") {
+      const viewedInvoice = await prisma.invoice.findUnique({
+        where: {
+          id: invoice.id,
+        },
+        select: invoiceSelect,
+      });
+
+      if (!viewedInvoice) {
+        throw new InvoiceServiceError("Invoice not found.");
+      }
+
+      return mapInvoiceToSummary(viewedInvoice);
+    }
+
+    if (invoice.status !== "SENT") {
+      throw new InvoiceServiceError(
+        "Only sent invoices can be marked as viewed."
+      );
+    }
+
+    const updatedInvoice = await prisma.invoice.update({
+      where: {
+        id: invoice.id,
+      },
+      data: {
+        status: "VIEWED",
+      },
+      select: invoiceSelect,
+    });
+
+    return mapInvoiceToSummary(updatedInvoice);
   },
 };

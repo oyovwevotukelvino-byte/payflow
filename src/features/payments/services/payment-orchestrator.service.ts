@@ -16,14 +16,17 @@ export interface PaymentInitializationResult {
 function convertAmountStringToKobo(amount: string): number {
   const trimmed = amount.trim();
 
-  if (!/^\d+\.\d{2}$/.test(trimmed)) {
+  if (!/^\d+(?:\.\d{1,2})?$/.test(trimmed)) {
     throw new PaymentOrchestrationError(
       `Payment amount "${amount}" is not in the expected format.`
     );
   }
 
-  const [naira, kobo] = trimmed.split(".");
-  const totalKobo = Number(naira) * 100 + Number(kobo);
+  const [naira, kobo = ""] = trimmed.split(".");
+
+  const normalizedKobo = kobo.padEnd(2, "0");
+
+  const totalKobo = Number(naira) * 100 + Number(normalizedKobo);
 
   if (!Number.isSafeInteger(totalKobo)) {
     throw new PaymentOrchestrationError(
@@ -60,11 +63,11 @@ export const paymentOrchestratorService = {
     let paystackResponse;
     try {
       paystackResponse = await paystackService.initializeTransaction({
-     email: payment.customerEmail,
-     amountInKobo,
-     reference: payment.reference,
-     callbackUrl: `${env.AUTH_URL}/payment/callback`,
-  });
+        email: payment.customerEmail,
+        amountInKobo,
+        reference: payment.reference,
+        callbackUrl: `${env.AUTH_URL}/payment/callback`,
+      });
     } catch (err) {
       if (err instanceof PaystackServiceError) {
         throw new PaymentOrchestrationError(err.message);
@@ -84,75 +87,65 @@ export const paymentOrchestratorService = {
       authorizationUrl: paystackResponse.authorizationUrl,
     };
   },
-  async verifyPayment(
-  reference: string
-): Promise<PaymentVerificationResult> {
-  if (!reference || reference.trim().length === 0) {
-    throw new PaymentOrchestrationError(
-      "Payment reference is required."
-    );
-  }
+  async verifyPayment(reference: string): Promise<PaymentVerificationResult> {
+    if (!reference || reference.trim().length === 0) {
+      throw new PaymentOrchestrationError("Payment reference is required.");
+    }
 
-  const normalizedReference = reference.trim();
+    const normalizedReference = reference.trim();
 
-  let verification;
+    let verification;
 
-  try {
-    verification =
-      await paystackService.verifyTransaction(
-        normalizedReference
-      );
-  } catch (err) {
-    if (err instanceof PaystackServiceError) {
+    try {
+      verification =
+        await paystackService.verifyTransaction(normalizedReference);
+    } catch (err) {
+      if (err instanceof PaystackServiceError) {
+        throw new PaymentOrchestrationError(err.message);
+      }
+
+      throw err;
+    }
+
+    if (verification.reference !== normalizedReference) {
       throw new PaymentOrchestrationError(
-        err.message
+        "Paystack returned a mismatched payment reference."
       );
     }
 
-    throw err;
-  }
+    if (verification.currency !== "NGN") {
+      throw new PaymentOrchestrationError(
+        "This payment was not processed in Nigerian Naira."
+      );
+    }
 
-  if (verification.reference !== normalizedReference) {
-    throw new PaymentOrchestrationError(
-      "Paystack returned a mismatched payment reference."
-    );
-  }
+    if (verification.status !== "success") {
+      return {
+        isSuccessful: false,
+        reference: normalizedReference,
+        message: "Payment was not successful.",
+      };
+    }
 
-  if (verification.currency !== "NGN") {
-    throw new PaymentOrchestrationError(
-      "This payment was not processed in Nigerian Naira."
-    );
-  }
+    try {
+      await paymentService.markPaymentSuccessful(
+        normalizedReference,
+        verification.amount
+      );
+    } catch (err) {
+      if (err instanceof PaymentServiceError) {
+        throw new PaymentOrchestrationError(err.message);
+      }
 
-  if (verification.status !== "success") {
+      throw err;
+    }
+
     return {
-      isSuccessful: false,
+      isSuccessful: true,
       reference: normalizedReference,
-      message: "Payment was not successful.",
+      message: "Payment verified successfully.",
     };
-  }
-
-  try {
-    await paymentService.markPaymentSuccessful(
-      normalizedReference,
-      verification.amount
-    );
-  } catch (err) {
-    if (err instanceof PaymentServiceError) {
-      throw new PaymentOrchestrationError(
-        err.message
-      );
-    }
-
-    throw err;
-  }
-
-  return {
-    isSuccessful: true,
-    reference: normalizedReference,
-    message: "Payment verified successfully.",
-  };
-},
+  },
 
   /**
    * Public, anonymous-customer orchestration. Identical composition to
@@ -183,11 +176,11 @@ export const paymentOrchestratorService = {
     let paystackResponse;
     try {
       paystackResponse = await paystackService.initializeTransaction({
-      email: payment.customerEmail,
-      amountInKobo,
-      reference: payment.reference,
-      callbackUrl: `${env.AUTH_URL}/payment/callback`,
-   });
+        email: payment.customerEmail,
+        amountInKobo,
+        reference: payment.reference,
+        callbackUrl: `${env.AUTH_URL}/payment/callback`,
+      });
     } catch (err) {
       if (err instanceof PaystackServiceError) {
         throw new PaymentOrchestrationError(err.message);

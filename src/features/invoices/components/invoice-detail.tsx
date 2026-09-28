@@ -1,7 +1,7 @@
 // features/invoices/components/invoice-detail.tsx
 import { format } from "date-fns";
 import type { InvoiceSummary } from "../types";
-
+import { InvoiceActions } from "./invoice-actions";
 interface InvoiceDetailProps {
   invoice: InvoiceSummary;
 }
@@ -23,51 +23,86 @@ const STATUS_LABELS: Record<string, string> = {
 export function InvoiceDetail({ invoice }: InvoiceDetailProps) {
   return (
     <div className="space-y-8">
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+          <h1 className="text-foreground text-2xl font-semibold tracking-tight">
             {invoice.invoiceNumber}
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+
+          <p className="text-muted-foreground mt-1 text-sm">
             Created {format(new Date(invoice.createdAt), "MMM d, yyyy")}
           </p>
         </div>
-        <span className="rounded-full bg-muted px-3 py-1 text-sm font-medium text-foreground">
-          {STATUS_LABELS[invoice.status] ?? invoice.status}
-        </span>
+
+        <div className="flex flex-col items-start gap-3 sm:items-end">
+          <span className="bg-muted text-foreground rounded-full px-3 py-1 text-sm font-medium">
+            {STATUS_LABELS[invoice.status] ?? invoice.status}
+          </span>
+
+          <InvoiceActions
+            invoiceId={invoice.id}
+            status={invoice.status}
+            publicToken={invoice.publicToken}
+          />
+        </div>
       </div>
 
-      <div className="rounded-xl border border-border p-5">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+      <div className="border-border rounded-xl border p-5">
+        <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
           Bill to
         </p>
-        <p className="mt-2 text-sm font-medium text-foreground">{invoice.customerName}</p>
-        <p className="text-sm text-muted-foreground">{invoice.customerPhone}</p>
+        <p className="text-foreground mt-2 text-sm font-medium">
+          {invoice.customerName}
+        </p>
+        <p className="text-muted-foreground text-sm">{invoice.customerPhone}</p>
         {invoice.customerEmail && (
-          <p className="text-sm text-muted-foreground">{invoice.customerEmail}</p>
+          <p className="text-muted-foreground text-sm">
+            {invoice.customerEmail}
+          </p>
         )}
         {invoice.customerAddress && (
-          <p className="text-sm text-muted-foreground">{invoice.customerAddress}</p>
+          <p className="text-muted-foreground text-sm">
+            {invoice.customerAddress}
+          </p>
         )}
       </div>
 
-      <div className="rounded-xl border border-border">
+      <div className="border-border rounded-xl border">
         <table className="w-full text-left text-sm">
-          <thead className="border-b border-border bg-muted/40">
+          <thead className="border-border bg-muted/40 border-b">
             <tr>
-              <th className="px-4 py-3 font-medium text-muted-foreground">Description</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Qty</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Price</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Amount</th>
+              <th className="text-muted-foreground px-4 py-3 font-medium">
+                Description
+              </th>
+              <th className="text-muted-foreground px-4 py-3 text-right font-medium">
+                Qty
+              </th>
+              <th className="text-muted-foreground px-4 py-3 text-right font-medium">
+                Price
+              </th>
+              <th className="text-muted-foreground px-4 py-3 text-right font-medium">
+                Amount
+              </th>
             </tr>
           </thead>
           <tbody>
             {invoice.items.map((item) => (
-              <tr key={item.id} className="border-b border-border last:border-0">
-                <td className="px-4 py-3 text-foreground">{item.description}</td>
-                <td className="px-4 py-3 text-right text-foreground">{item.quantity}</td>
-                <td className="px-4 py-3 text-right text-foreground">₦{item.unitPrice}</td>
-                <td className="px-4 py-3 text-right font-medium text-foreground">₦{item.total}</td>
+              <tr
+                key={item.id}
+                className="border-border border-b last:border-0"
+              >
+                <td className="text-foreground px-4 py-3">
+                  {item.description}
+                </td>
+                <td className="text-foreground px-4 py-3 text-right">
+                  {item.quantity}
+                </td>
+                <td className="text-foreground px-4 py-3 text-right">
+                  ₦{item.unitPrice}
+                </td>
+                <td className="text-foreground px-4 py-3 text-right font-medium">
+                  ₦{item.total}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -75,15 +110,15 @@ export function InvoiceDetail({ invoice }: InvoiceDetailProps) {
       </div>
 
       <div className="ml-auto max-w-xs space-y-1.5 text-sm">
-        <div className="flex justify-between text-muted-foreground">
+        <div className="text-muted-foreground flex justify-between">
           <span>Subtotal</span>
           <span>₦{invoice.subtotal}</span>
         </div>
-        <div className="flex justify-between text-muted-foreground">
+        <div className="text-muted-foreground flex justify-between">
           <span>{invoice.vatEnabled ? "VAT (7.5%)" : "Tax"}</span>
           <span>₦{invoice.tax}</span>
         </div>
-        <div className="flex justify-between border-t border-border pt-1.5 text-base font-semibold text-foreground">
+        <div className="border-border text-foreground flex justify-between border-t pt-1.5 text-base font-semibold">
           <span>Total</span>
           <span>₦{invoice.total}</span>
         </div>
@@ -91,10 +126,10 @@ export function InvoiceDetail({ invoice }: InvoiceDetailProps) {
 
       {invoice.notes && (
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
             Notes
           </p>
-          <p className="mt-1 text-sm text-foreground">{invoice.notes}</p>
+          <p className="text-foreground mt-1 text-sm">{invoice.notes}</p>
         </div>
       )}
     </div>

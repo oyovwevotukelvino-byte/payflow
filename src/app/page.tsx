@@ -1,7 +1,5 @@
 // src/app/page.tsx — REPLACES the Sprint 1 version
-import { redirect } from "next/navigation";
 import { MotionConfig } from "framer-motion";
-import { auth } from "@/auth";
 import { Navbar } from "@/components/marketing/navbar";
 import { Hero } from "@/components/marketing/hero";
 import { TrustSection } from "@/components/marketing/trust-section";
@@ -18,22 +16,17 @@ import { InteractiveDemo } from "@/components/marketing/interactive-demo";
 import { Footer } from "@/components/marketing/footer";
 
 export const metadata = {
-  title: "PayFlow \u2014 Invoice. Send on WhatsApp. Get paid faster.",
+  title: "PayFlow — Invoice. Send on WhatsApp. Get paid faster.",
   description:
     "Create professional invoices, send them on WhatsApp, and know the moment you're paid. Built for Nigerian businesses.",
 };
 
-export default async function HomePage() {
-//   const session = await auth();
-
-//   if (session?.user) {
-//     redirect("/dashboard");
-// }
+export default function HomePage() {
   return (
     <MotionConfig reducedMotion="user">
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[60] focus:rounded-lg focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-primary-foreground"
+        className="focus:bg-primary focus:text-primary-foreground sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[60] focus:rounded-lg focus:px-4 focus:py-2 focus:text-sm focus:font-medium"
       >
         Skip to content
       </a>
@@ -53,7 +46,6 @@ export default async function HomePage() {
         <Pricing />
         <FAQ />
         <CTA />
-        
       </main>
 
       <Footer />

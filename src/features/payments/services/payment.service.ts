@@ -34,11 +34,7 @@ const paymentSelect = {
 /**
  * Invoice statuses that are allowed to receive payments.
  */
-const PAYABLE_STATUSES = [
-  "SENT",
-  "VIEWED",
-  "OVERDUE",
-] as const;
+const PAYABLE_STATUSES = ["SENT", "VIEWED", "OVERDUE"] as const;
 
 function generatePaymentReference(): string {
   return `pf_${randomUUID()}`;
@@ -47,16 +43,17 @@ function generatePaymentReference(): string {
 function convertAmountStringToKobo(amount: string): number {
   const trimmed = amount.trim();
 
-  if (!/^\d+\.\d{2}$/.test(trimmed)) {
+  if (!/^\d+(?:\.\d{1,2})?$/.test(trimmed)) {
     throw new PaymentServiceError(
       `Payment amount "${amount}" is not in the expected format.`
     );
   }
 
-  const [naira, kobo] = trimmed.split(".");
+  const [naira, kobo = ""] = trimmed.split(".");
 
-  const totalKobo =
-    Number(naira) * 100 + Number(kobo);
+  const normalizedKobo = kobo.padEnd(2, "0");
+
+  const totalKobo = Number(naira) * 100 + Number(normalizedKobo);
 
   if (!Number.isSafeInteger(totalKobo)) {
     throw new PaymentServiceError(
@@ -70,9 +67,7 @@ function convertAmountStringToKobo(amount: string): number {
 function isPayableStatus(
   status: string
 ): status is (typeof PAYABLE_STATUSES)[number] {
-  return PAYABLE_STATUSES.includes(
-    status as (typeof PAYABLE_STATUSES)[number]
-  );
+  return PAYABLE_STATUSES.includes(status as (typeof PAYABLE_STATUSES)[number]);
 }
 
 export const paymentService = {
@@ -108,14 +103,13 @@ export const paymentService = {
       );
     }
 
-    const existingPending =
-      await prisma.payment.findFirst({
-        where: {
-          invoiceId: invoice.id,
-          status: "PENDING",
-        },
-        select: paymentSelect,
-      });
+    const existingPending = await prisma.payment.findFirst({
+      where: {
+        invoiceId: invoice.id,
+        status: "PENDING",
+      },
+      select: paymentSelect,
+    });
 
     if (existingPending) {
       return {
@@ -152,9 +146,7 @@ export const paymentService = {
    * Existing pending payments are reused instead of
    * creating duplicate payment records.
    */
-  async initializePublicPayment(
-    publicToken: string
-  ): Promise<PaymentSummary> {
+  async initializePublicPayment(publicToken: string): Promise<PaymentSummary> {
     const invoice = await prisma.invoice.findUnique({
       where: {
         publicToken,
@@ -169,9 +161,7 @@ export const paymentService = {
     });
 
     if (!invoice) {
-      throw new PaymentServiceError(
-        "This payment link is invalid."
-      );
+      throw new PaymentServiceError("This payment link is invalid.");
     }
 
     if (!isPayableStatus(invoice.status)) {
@@ -180,14 +170,13 @@ export const paymentService = {
       );
     }
 
-    const existingPending =
-      await prisma.payment.findFirst({
-        where: {
-          invoiceId: invoice.id,
-          status: "PENDING",
-        },
-        select: paymentSelect,
-      });
+    const existingPending = await prisma.payment.findFirst({
+      where: {
+        invoiceId: invoice.id,
+        status: "PENDING",
+      },
+      select: paymentSelect,
+    });
 
     if (existingPending) {
       return {
@@ -227,61 +216,86 @@ export const paymentService = {
     reference: string,
     verifiedAmountInKobo: number
   ): Promise<void> {
+    const normalizedReference = reference.trim();
+
+    if (!normalizedReference) {
+      throw new PaymentServiceError("Payment reference is required.");
+    }
+
     if (
       !Number.isSafeInteger(verifiedAmountInKobo) ||
       verifiedAmountInKobo <= 0
     ) {
-      throw new PaymentServiceError(
-        "Invalid verified payment amount."
-      );
+      throw new PaymentServiceError("Invalid verified payment amount.");
     }
 
     const payment = await prisma.payment.findUnique({
       where: {
-        reference,
+        reference: normalizedReference,
       },
       select: {
         id: true,
         invoiceId: true,
         amount: true,
         status: true,
+        invoice: {
+          select: {
+            status: true,
+          },
+        },
       },
     });
 
     if (!payment) {
-      throw new PaymentServiceError(
-        "Payment record not found."
-      );
+      throw new PaymentServiceError("Payment record not found.");
     }
 
-    const expectedAmountInKobo =
-      convertAmountStringToKobo(
-        payment.amount.toString()
-      );
+    const expectedAmountInKobo = convertAmountStringToKobo(
+      payment.amount.toString()
+    );
 
-    if (
-      expectedAmountInKobo !==
-      verifiedAmountInKobo
-    ) {
-      throw new PaymentServiceError(
-        "Payment amount verification failed."
-      );
+    if (expectedAmountInKobo !== verifiedAmountInKobo) {
+      throw new PaymentServiceError("Payment amount verification failed.");
     }
 
     /**
      * Idempotency:
      *
-     * Paystack verification may happen more than once.
-     * If the payment has already succeeded, safely return.
+     * A successful Paystack payment may be processed more than once
+     * because callbacks and webhooks can both reach PayFlow.
      */
     if (payment.status === "SUCCESS") {
       return;
+    }
+
+    /**
+     * Only a pending payment can transition to SUCCESS.
+     */
+    if (payment.status !== "PENDING") {
+      throw new PaymentServiceError(
+        `Payment cannot be marked successful from ${payment.status} status.`
+      );
+    }
+
+    /**
+     * The invoice must still be in a state that can legitimately
+     * receive payment.
+     */
+    if (
+      payment.invoice.status !== "SENT" &&
+      payment.invoice.status !== "VIEWED" &&
+      payment.invoice.status !== "OVERDUE"
+    ) {
+      throw new PaymentServiceError(
+        `Invoice cannot be marked paid from ${payment.invoice.status} status.`
+      );
     }
 
     await prisma.$transaction([
       prisma.payment.update({
         where: {
           id: payment.id,
+          status: "PENDING",
         },
         data: {
           status: "SUCCESS",
@@ -292,54 +306,12 @@ export const paymentService = {
       prisma.invoice.update({
         where: {
           id: payment.invoiceId,
+          status: payment.invoice.status,
         },
         data: {
           status: "PAID",
         },
       }),
     ]);
-  },
-
-  /**
-   * Marks a payment as failed.
-   *
-   * We intentionally do not change the invoice status.
-   * The invoice remains payable unless explicitly
-   * cancelled or paid through another successful payment.
-   */
-  async markPaymentFailed(
-    reference: string
-  ): Promise<void> {
-    const payment = await prisma.payment.findUnique({
-      where: {
-        reference,
-      },
-      select: {
-        id: true,
-        status: true,
-      },
-    });
-
-    if (!payment) {
-      throw new PaymentServiceError(
-        "Payment record not found."
-      );
-    }
-
-    /**
-     * Never downgrade a successful payment.
-     */
-    if (payment.status === "SUCCESS") {
-      return;
-    }
-
-    await prisma.payment.update({
-      where: {
-        id: payment.id,
-      },
-      data: {
-        status: "FAILED",
-      },
-    });
   },
 };

@@ -1,6 +1,10 @@
+// src/app/payment/callback/page.tsx
 import Link from "next/link";
 
-import { paymentOrchestratorService } from "@/features/payments/services/payment-orchestrator.service";
+import {
+  paymentOrchestratorService,
+  PaymentOrchestrationError,
+} from "@/features/payments/services/payment-orchestrator.service";
 
 interface PaymentCallbackPageProps {
   searchParams: Promise<{
@@ -12,39 +16,51 @@ interface PaymentResultProps {
   success: boolean;
   title: string;
   message: string;
+  reference?: string;
 }
 
 function PaymentResult({
   success,
   title,
   message,
+  reference,
 }: PaymentResultProps) {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="w-full max-w-md rounded-xl border bg-card p-8 text-center shadow-sm">
+    <main className="bg-muted/30 flex min-h-screen items-center justify-center px-4 py-10">
+      <section className="bg-background w-full max-w-md rounded-2xl border p-8 text-center shadow-sm">
+        <p className="text-lg font-semibold">PayFlow</p>
+
         <div
-          className={`mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full ${
+          className={`mx-auto mt-6 flex h-16 w-16 items-center justify-center rounded-full text-3xl font-bold ${
             success
               ? "bg-green-100 text-green-600"
-              : "bg-red-100 text-red-600"
+              : "bg-destructive/10 text-destructive"
           }`}
         >
-          {success ? "✓" : "✕"}
+          {success ? "✓" : "!"}
         </div>
 
-        <h1 className="text-2xl font-semibold">{title}</h1>
+        <h1 className="mt-6 text-2xl font-semibold">{title}</h1>
 
-        <p className="mt-3 text-sm text-muted-foreground">
+        <p className="text-muted-foreground mt-3 text-sm leading-6">
           {message}
         </p>
 
+        {reference && (
+          <p className="text-muted-foreground mt-5 text-xs break-all">
+            Payment reference:
+            <br />
+            {reference}
+          </p>
+        )}
+
         <Link
           href="/"
-          className="mt-6 inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          className="bg-primary text-primary-foreground mt-8 inline-flex w-full items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold transition-opacity hover:opacity-90"
         >
           Return to PayFlow
         </Link>
-      </div>
+      </section>
     </main>
   );
 }
@@ -54,57 +70,50 @@ export default async function PaymentCallbackPage({
 }: PaymentCallbackPageProps) {
   const { reference } = await searchParams;
 
-  if (!reference) {
+  if (!reference?.trim()) {
     return (
       <PaymentResult
         success={false}
-        title="Invalid payment reference"
-        message="We could not find a payment reference for this transaction."
+        title="Payment reference missing"
+        message="We couldn't verify this payment because the payment reference is missing."
       />
     );
   }
 
-  let verificationResult:
-    | {
-        success: boolean;
-        title: string;
-        message: string;
-      }
-    | undefined;
+  let success = false;
+  let title = "Payment verification failed";
+  let message =
+    "We couldn't verify your payment. Please contact the business if you completed the payment.";
+  let verifiedReference = reference;
 
   try {
-    const result =
-      await paymentOrchestratorService.verifyPayment(reference);
+    const result = await paymentOrchestratorService.verifyPayment(reference);
 
-    if (!result.isSuccessful) {
-      verificationResult = {
-        success: false,
-        title: "Payment was not successful",
-        message: result.message,
-      };
+    success = result.isSuccessful;
+    verifiedReference = result.reference;
+
+    if (result.isSuccessful) {
+      title = "Payment successful";
+      message = result.message;
     } else {
-      verificationResult = {
-        success: true,
-        title: "Payment successful",
-        message: result.message,
-      };
+      title = "Payment was not successful";
+      message = result.message;
     }
   } catch (error) {
-    verificationResult = {
-      success: false,
-      title: "Payment verification failed",
-      message:
-        error instanceof Error
-          ? error.message
-          : "We could not verify your payment. Please contact the business if you were charged.",
-    };
+    console.error("Payment callback verification failed:", error);
+
+    message =
+      error instanceof PaymentOrchestrationError
+        ? error.message
+        : "We couldn't verify your payment. Please contact the business if you completed the payment.";
   }
 
   return (
     <PaymentResult
-      success={verificationResult.success}
-      title={verificationResult.title}
-      message={verificationResult.message}
+      success={success}
+      title={title}
+      message={message}
+      reference={verifiedReference}
     />
   );
 }
